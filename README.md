@@ -1,5 +1,7 @@
 # React native wheel picker V2
 
+### this fork is for adding accessibility on android and changing '@react-native-community/picker' deprecated dependency to '@react-native-picker/picker'
+
 <p>
 <img src="http://img.shields.io/npm/v/react-native-wheel-picker-android.svg" />
 <img src="https://img.shields.io/npm/dm/react-native-wheel-picker-android.svg" />
