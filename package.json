@@ -23,7 +23,9 @@
   },
   "homepage": "https://github.com/kalontech/ReactNativeWheelPicker",
   "dependencies": {
-    "@react-native-picker/picker": "^2.1.0",
     "moment": "^2.24.0"
+  },
+  "peerDependencies": {
+    "@react-native-picker/picker": "^2.1.0"
   }
 }
