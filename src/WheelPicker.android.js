@@ -25,12 +25,6 @@ type Props = {
 }
 
 export default class WheelPicker extends React.Component<Props> {
-  static defaultProps = {
-    style: {
-      width: 'auto',
-      height: 150,
-    },
-  }
 
   onItemSelected = (event: any) => {
     if (this.props.onItemSelected) {
@@ -41,13 +35,11 @@ export default class WheelPicker extends React.Component<Props> {
   render() {
     const { isCyclic, data } = this.props
     return (
-      <View pointerEvents={this.props.disabled ? "none" : "auto"}>
         <WheelPickerView
           {...this.props}
           isCyclic={data.length > 2 ? isCyclic : false}
           onChange={this.onItemSelected}
         />
-      </View>
     )
   }
 }
