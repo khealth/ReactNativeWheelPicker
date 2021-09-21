@@ -7,6 +7,7 @@ interface Props {
   selectedItem?: number;
   onItemSelected?: Function;
   disabled?: boolean;
+  style?: object
 }
 
 const WheelPicker: React.FC<Props> = props => {
@@ -14,9 +15,13 @@ const WheelPicker: React.FC<Props> = props => {
   const { data, onItemSelected, disabled } = props;
   if (!data || data.length === 0) return null;
   return (
-    <View pointerEvents={disabled ? "none" : "auto"}>
+    <View
+        pointerEvents={disabled ? "none" : "auto"}
+        style={props.style}
+    >
       <Picker
         {...props}
+        style={{...props.style, margin: 'auto'}}
         selectedValue={data[selectedItem]}
         onValueChange={(value, index): void => {
           if (onItemSelected) onItemSelected(index);
