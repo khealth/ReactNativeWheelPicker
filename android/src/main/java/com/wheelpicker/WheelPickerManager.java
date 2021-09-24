@@ -22,6 +22,7 @@ import java.util.List;
 
 public class WheelPickerManager extends SimpleViewManager<LoopView> implements LoopListener{
     LoopView wheelPicker;
+    ReadableArray pickerData;
     public static final String REACT_CLASS = "WheelPicker";
 
     @Override
@@ -33,11 +34,14 @@ public class WheelPickerManager extends SimpleViewManager<LoopView> implements L
     protected LoopView createViewInstance(ThemedReactContext context) {
         wheelPicker = new LoopView(context);
         wheelPicker.setListener(this);
+        wheelPicker.sendAccessibilityEvent(AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED);
+
         return wheelPicker;
     }
 
     @ReactProp(name = "data")
     public void setData(LoopView wheelPicker, ReadableArray data) {
+        pickerData = data;
         if (wheelPicker!=null){
             List<String> emptyList = new ArrayList<>();
             try {
@@ -153,6 +157,15 @@ public class WheelPickerManager extends SimpleViewManager<LoopView> implements L
     public void setSelectedItem(LoopView wheelPicker, int pos) {
         if (wheelPicker!=null){
             wheelPicker.setSelectedItem(pos);
+            try {
+                wheelPicker.setContentDescription(String.valueOf(pickerData.getInt(pos)));
+            } catch (Exception e){
+                try {
+                    wheelPicker.setContentDescription(pickerData.getString(pos));
+                } catch (Exception ex){
+                    wheelPicker.setContentDescription("no value selected");
+                }
+            }
         }
     }
 
