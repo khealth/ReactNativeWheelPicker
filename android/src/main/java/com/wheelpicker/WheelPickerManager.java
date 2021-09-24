@@ -17,6 +17,8 @@ import com.facebook.react.uimanager.ThemedReactContext;
 import com.facebook.react.uimanager.events.RCTEventEmitter;
 import com.facebook.react.views.text.ReactFontManager;
 
+import android.view.accessibility.AccessibilityEvent;
+
 import java.util.ArrayList;
 import java.util.List;
 
