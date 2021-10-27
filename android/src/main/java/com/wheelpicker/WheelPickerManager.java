@@ -24,7 +24,6 @@ import java.util.List;
 
 public class WheelPickerManager extends SimpleViewManager<LoopView> implements LoopListener{
     LoopView wheelPicker;
-    ReadableArray pickerData;
     public static final String REACT_CLASS = "WheelPicker";
 
     @Override
@@ -43,7 +42,6 @@ public class WheelPickerManager extends SimpleViewManager<LoopView> implements L
 
     @ReactProp(name = "data")
     public void setData(LoopView wheelPicker, ReadableArray data) {
-        pickerData = data;
         if (wheelPicker!=null){
             List<String> emptyList = new ArrayList<>();
             try {
@@ -160,13 +158,9 @@ public class WheelPickerManager extends SimpleViewManager<LoopView> implements L
         if (wheelPicker!=null){
             wheelPicker.setSelectedItem(pos);
             try {
-                wheelPicker.setContentDescription(String.valueOf(pickerData.getInt(pos)));
-            } catch (Exception e){
-                try {
-                    wheelPicker.setContentDescription(pickerData.getString(pos));
-                } catch (Exception ex){
-                    wheelPicker.setContentDescription("no value selected");
-                }
+                wheelPicker.setContentDescription((String) wheelPicker.arrayList.get(pos));
+            } catch (Exception ex){
+                wheelPicker.setContentDescription("no value selected");
             }
         }
     }
