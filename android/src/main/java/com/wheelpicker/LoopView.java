@@ -7,17 +7,27 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Rect;
 import android.graphics.Typeface;
+import android.os.Bundle;
 import android.os.Handler;
+import android.text.TextUtils;
 import android.util.AttributeSet;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.View;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+
+import android.view.accessibility.AccessibilityEvent;
+import android.view.accessibility.AccessibilityNodeInfo;
+import android.view.accessibility.AccessibilityNodeProvider;
+
+
 
 public class LoopView extends View {
     ScheduledExecutorService mExecutor = Executors.newSingleThreadScheduledExecutor();
@@ -54,6 +64,8 @@ public class LoopView extends View {
     float y1;
     float y2;
     float dy;
+
+    private AccessibilityNodeProvider mAccessibilityNodeProvider;
 
     public LoopView(Context context) {
         super(context);
@@ -181,6 +193,8 @@ public class LoopView extends View {
         if (loopListener != null) {
             postDelayed(new LoopRunnable(this), 200L);
         }
+        sendAccessibilityEvent(AccessibilityEvent.TYPE_VIEW_ACCESSIBILITY_FOCUSED);
+        setContentDescription((String)arrayList.get(selectedItem));
     }
 
     @Override
@@ -306,7 +320,7 @@ public class LoopView extends View {
             case MotionEvent.ACTION_DOWN:
                 y1 = motionevent.getRawY();
                 if (getParent() != null) {
-                  getParent().requestDisallowInterceptTouchEvent(true);
+                    getParent().requestDisallowInterceptTouchEvent(true);
                 }
                 break;
             case MotionEvent.ACTION_MOVE:
@@ -329,7 +343,7 @@ public class LoopView extends View {
                     smoothScroll();
                 }
                 if (getParent() != null) {
-                  getParent().requestDisallowInterceptTouchEvent(false);
+                    getParent().requestDisallowInterceptTouchEvent(false);
                 }
                 return true;
         }
@@ -412,9 +426,158 @@ public class LoopView extends View {
     }
 
     public final void setSelectedItem(int position) {
+        if(position < arrayList.size())
+            setContentDescription((String)arrayList.get(position));
         totalScrollY = (int) ((float) (position - initPosition) * (lineSpacingMultiplier * maxTextHeight));
         invalidate();
         smoothScroll();
     }
 
+    @Override
+    public void onPopulateAccessibilityEvent (AccessibilityEvent event) {
+        super.onPopulateAccessibilityEvent(event);
+        event.getText().add((String)arrayList.get(selectedItem));
+    }
+
+    @Override
+    public boolean dispatchPopulateAccessibilityEvent(AccessibilityEvent event) {
+        boolean completed = super.dispatchPopulateAccessibilityEvent(event);
+        event.getText().add((String)arrayList.get(selectedItem));
+        return completed;
+    }
+
+    @Override
+    public AccessibilityNodeProvider getAccessibilityNodeProvider() {
+        if (mAccessibilityNodeProvider == null) {
+            mAccessibilityNodeProvider = new VirtualDescendantsProvider();
+        }
+        return mAccessibilityNodeProvider;
+    }
+
+    private class VirtualDescendantsProvider extends AccessibilityNodeProvider {
+        @Override
+        public AccessibilityNodeInfo createAccessibilityNodeInfo(int virtualViewId) {
+            AccessibilityNodeInfo info = null;
+            LoopView root = LoopView.this;
+
+            if (virtualViewId == View.NO_ID) {
+                info = AccessibilityNodeInfo.obtain(root);
+                onInitializeAccessibilityNodeInfo(info);
+
+                int itemIndex = root.getSelectedItem();
+                int childCount = root.arrayList != null ? root.arrayList.size() : 0;
+                int sideSize = (root.itemCount % 2 == 0  ? root.itemCount : (root.itemCount - 1))/2;
+                int minIndex = Math.max(itemIndex - sideSize,0);
+                int maxIndex = Math.min(itemIndex + sideSize, childCount-1);
+
+                for (int i = minIndex; i <= maxIndex; ++i) {
+                    info.addChild(root, i);
+                }
+            } else {
+                info = AccessibilityNodeInfo.obtain();
+                info.setClassName(root.getClass().getName() + "Item");
+                info.setPackageName(getContext().getPackageName());
+                info.setSource(root, virtualViewId);
+
+                // A Naive computation of bounds per item, by dividing global space
+                // to slots per itemsCount, and figuring out the right position
+                // as offset from the selected item, which is the center
+                int itemIndex = root.getSelectedItem();
+                int childCount = root.arrayList != null ? root.arrayList.size() : 0;
+                int sideSize = (root.itemCount % 2 == 0  ? root.itemCount : (root.itemCount - 1))/2;
+                int minIndex = Math.max(itemIndex - sideSize,0);
+                int maxIndex = Math.min(itemIndex + sideSize, childCount-1);
+                boolean isInView = (virtualViewId>= minIndex && virtualViewId<=maxIndex);
+
+                Rect r = new Rect();
+                boolean isVisible = isInView && root.getGlobalVisibleRect(r);
+
+                // for some reason, while showing 5 items (like ios) itemCount returns 7
+                // this sets visible only the middle 5 (maximum)
+                isVisible = isVisible && (Math.abs(virtualViewId - itemIndex) <= 2 );
+
+                if(isInView) {
+                    int itemHeight = (int) Math.round(r.height()/ Math.max(root.itemCount, 5) * 1.2);
+                    r.top += ((virtualViewId - itemIndex + sideSize)*itemHeight) - itemHeight;
+                    r.bottom = r.top + itemHeight;
+                }
+                else {
+                    r.top = r.bottom = r.left = r.right = 0;
+                }
+
+                info.setBoundsInScreen(r);
+                info.setVisibleToUser(isVisible);
+                info.setParent(root);
+                info.setText((String) root.arrayList.get(virtualViewId));
+                info.setSelected(itemIndex == virtualViewId);
+                info.setEnabled(true);
+            }
+            return info;
+        }
+
+        @Override
+        public List<AccessibilityNodeInfo> findAccessibilityNodeInfosByText(String searched,
+                                                                            int virtualViewId) {
+            if (TextUtils.isEmpty(searched)) {
+                return Collections.emptyList();
+            }
+            String searchedLowerCase = searched.toLowerCase();
+            List<AccessibilityNodeInfo> result = null;
+            LoopView root = LoopView.this;
+
+            if (virtualViewId == View.NO_ID) {
+                for (int i = 0; i < root.arrayList.size(); i++) {
+                    String textToLowerCase = ((String) root.arrayList.get(i)).toLowerCase();
+                    if (textToLowerCase.contains(searchedLowerCase)) {
+                        if (result == null) {
+                            result = new ArrayList<AccessibilityNodeInfo>();
+                        }
+                        result.add(createAccessibilityNodeInfo(i));
+                    }
+                }
+            } else {
+                String textToLowerCase = ((String) root.arrayList.get(virtualViewId)).toLowerCase();
+                if (textToLowerCase.contains(searchedLowerCase)) {
+                    result = new ArrayList<AccessibilityNodeInfo>();
+                    result.add(createAccessibilityNodeInfo(virtualViewId));
+                }
+            }
+            if (result == null) {
+                return Collections.emptyList();
+            }
+            return result;
+        }
+
+        @Override
+        public boolean performAction(int virtualViewId, int action, Bundle arguments) {
+
+            LoopView root = LoopView.this;
+
+            if (virtualViewId == View.NO_ID) {
+                switch (action) {
+                    // Allowing lowercase search as in the implementation of findAccessibilityNodeInfosByText
+                    case AccessibilityNodeInfo.ACTION_SET_TEXT:
+                        CharSequence chars = arguments.getCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE);
+                        String searched = chars.toString();
+                        if(TextUtils.isEmpty(searched))
+                            return true; // ignore empty text
+                        String searchedLowerCase = searched.toLowerCase();
+                        for (int i = 0; i < root.arrayList.size(); i++) {
+                            String textToLowerCase = ((String)root.arrayList.get(i)).toLowerCase();
+                            if (textToLowerCase.contains(searchedLowerCase)) {
+                                root.setSelectedItem(i);
+                                break;
+                            }
+                        }
+                        return true;
+                    default:
+                        return root.performAccessibilityAction(action, arguments);
+                }
+            }
+
+            return false;
+        }
+    }
+
 }
+
