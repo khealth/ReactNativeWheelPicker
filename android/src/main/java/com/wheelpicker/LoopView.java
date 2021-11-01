@@ -426,8 +426,6 @@ public class LoopView extends View {
     }
 
     public final void setSelectedItem(int position) {
-        if(position < arrayList.size())
-            setContentDescription((String)arrayList.get(position));
         totalScrollY = (int) ((float) (position - initPosition) * (lineSpacingMultiplier * maxTextHeight));
         invalidate();
         smoothScroll();
