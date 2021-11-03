@@ -193,8 +193,6 @@ public class LoopView extends View {
         if (loopListener != null) {
             postDelayed(new LoopRunnable(this), 200L);
         }
-        sendAccessibilityEvent(AccessibilityEvent.TYPE_VIEW_ACCESSIBILITY_FOCUSED);
-        setContentDescription((String)arrayList.get(selectedItem));
     }
 
     @Override
